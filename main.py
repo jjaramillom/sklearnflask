@@ -29,21 +29,27 @@ def predict():
     if clf:
         try:
             json_ = request.json
+            # print(request.json)
             query = pd.get_dummies(pd.DataFrame(json_))
-
+            print(query)
             # https://github.com/amirziai/sklearnflask/issues/3
             # Thanks to @lorenzori
             query = query.reindex(columns=model_columns, fill_value=0)
 
             prediction = list(clf.predict(query))
+            print(type(prediction))
+            print(type(prediction[0]))
+            prediction_int = []
+            for item in prediction:
+                prediction_int.append(item.item())
 
-            return jsonify({'prediction': prediction})
+            return jsonify({'prediction': prediction_int})
 
-        except Exception, e:
+        except Exception as e:
 
             return jsonify({'error': str(e), 'trace': traceback.format_exc()})
     else:
-        print 'train first'
+        print('train first')
         return 'no model here'
 
 
@@ -79,8 +85,8 @@ def train():
     clf = rf()
     start = time.time()
     clf.fit(x, y)
-    print 'Trained in %.1f seconds' % (time.time() - start)
-    print 'Model training score: %s' % clf.score(x, y)
+    print('Trained in %.1f seconds' % (time.time() - start))
+    print('Model training score: %s' % clf.score(x, y))
 
     joblib.dump(clf, model_file_name)
 
@@ -94,27 +100,25 @@ def wipe():
         os.makedirs(model_directory)
         return 'Model wiped'
 
-    except Exception, e:
-        print str(e)
+    except Exception as e:
+        print("type error: " + str(e))
         return 'Could not remove and recreate the model directory'
 
 
 if __name__ == '__main__':
-    try:
-        port = int(sys.argv[1])
-    except Exception, e:
-        port = 80
+    port = 80
 
     try:
         clf = joblib.load(model_file_name)
-        print 'model loaded'
+        print('model loaded')
         model_columns = joblib.load(model_columns_file_name)
-        print 'model columns loaded'
+        print('model columns loaded')
 
-    except Exception, e:
-        print 'No model here'
-        print 'Train first'
-        print str(e)
+    except Exception as e:
+        print('No model here')
+        print('Train first')
+        print(str(e))
         clf = None
 
-    app.run(host='0.0.0.0', port=port, debug=True)
+    #app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(debug=True)

@@ -1,0 +1,21 @@
+https://www.youtube.com/watch?v=QnDWIZuWYW0
+
+py -m venv flask --ONLY FIRST TIME
+flask\scripts\activate
+
+--SETTING UP SCHNEIDERS PROXY
+set http_proxy=http://205.167.7.126:10912
+set https_proxy=https://205.167.7.126:10912
+pip install --proxy=package_name
+
+pip install -r requirements.txt
+
+pip install flask
+
+--SAVES THE INSTALLED PACKAGES IN REQUIREMENTS,TXT
+pip freeze > requirements.txt
+
+set FLASK_APP=flaskblog.py
+flask run
+
+python flaskblog.py

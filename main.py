@@ -23,17 +23,19 @@ model_columns_file_name = '%s/model_columns.pkl' % model_directory
 model_columns = None
 clf = None
 
+@app.route('/', methods=['GET'])
+def main():
+    return jsonify({'valid requests': ['/train','/predict']})
+
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if clf:
         try:
             json_ = request.json
-            # print(request.json)
             query = pd.get_dummies(pd.DataFrame(json_))
             print(query)
-            # https://github.com/amirziai/sklearnflask/issues/3
-            # Thanks to @lorenzori
             query = query.reindex(columns=model_columns, fill_value=0)
 
             prediction = list(clf.predict(query))

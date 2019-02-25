@@ -1,0 +1,53 @@
+{
+  "parameters": {
+    "datetimeName": "datetime",
+    "targetName": "target",
+    "normalDriverNames": "att01,att02,att03",
+    "onIndicatorName": "NaN",
+    "usePastTargetAsNormalDriverUntilMs": "NaN",
+    "normalDriversPastWindowLength": "0",
+    "normalDriversPastSamplingPeriod": "0",
+    "usePublicHolidaysAsDriver": "False",
+    "publicHolidayLocale": "fra",
+    "useWeekendsAsDriver": "False",
+    "weekendDays": "Saturday,Sunday",
+    "useTimeCyclesAsDrivers": "True",
+    "localTimeZone": "Europe/Paris",
+    "testDataRatio": "0.2",
+    "testDataSelectionStrategy": "last",
+    "throwErrorOnMissingValues": "False",
+    "speedStrategy": "robust",
+    "optimizeModelParameters": "False",
+    "modelType": "random_forest"
+  },
+  "Data": [
+    {
+      "datetime": "2015-08-28T23:30:00Z",
+      "target": "",
+      "att01": 7.599999905,
+      "att02": 47,
+      "att03": 57.75999855
+    },
+    {
+      "datetime": "2015-08-29T00:00:00Z",
+      "target": 27.4871254,
+      "att01": 7.199999809,
+      "att02": 47,
+      "att03": 51.83999725
+    },
+    {
+      "datetime": "2015-08-29T00:30:00Z",
+      "target": "",
+      "att01": 8.800000191,
+      "att02": "",
+      "att03": 77.44000336
+    },
+    {
+      "datetime": "2015-08-29T01:00:00Z",
+      "target": 27.26479912,
+      "att01": 8.800000191,
+      "att02": "",
+      "att03": 77.44000336
+    }
+  ]
+}

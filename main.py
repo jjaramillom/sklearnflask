@@ -6,7 +6,9 @@ import traceback
 
 from flask import Flask, request, jsonify
 import pandas as pd
+import numpy as np
 from sklearn.externals import joblib
+from Anomalies_Detector import AnomalyDetector
 
 app = Flask(__name__)
 
@@ -15,90 +17,80 @@ training_data = 'data/titanic.csv'
 include = ['Age', 'Sex', 'Embarked', 'Survived']
 dependent_variable = include[-1]
 
+pickelName = 'testing'
+
 model_directory = 'model'
-model_file_name = '%s/model.pkl' % model_directory
-model_columns_file_name = '%s/model_columns.pkl' % model_directory
+model_file_name = '{}/{}.pkl'.format(model_directory, pickelName)
+model_columns_file_name = '{}/{}_columns.pkl'.format(model_directory, pickelName)
 
 # These will be populated at training time
 model_columns = None
-clf = None
+predictor = None
+
 
 @app.route('/', methods=['GET'])
 def main():
-    return jsonify({'valid requests': ['/train','/predict']})
-
+    print(request.args['version'])
+    return jsonify({'valid requests': ['/train - POST', '/predict - POST', '/wipe - GET']})
 
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if clf:
+    if predictor:
         try:
-            json_ = request.json
-            query = pd.get_dummies(pd.DataFrame(json_))
-            print(query)
-            query = query.reindex(columns=model_columns, fill_value=0)
-
-            prediction = list(clf.predict(query))
-            print(type(prediction))
-            print(type(prediction[0]))
-            prediction_int = []
-            for item in prediction:
-                prediction_int.append(item.item())
-
-            return jsonify({'prediction': prediction_int})
+            body = request.json
+            df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'])
+            global model_columns
+            df = df[model_columns]
+            start = time.time()
+            predictions = predictor.predict(df)
+            trainingTime = np.around(time.time() - start, decimals=3)
+            print('prediction in {0:.3f} seconds'.format(trainingTime))
+            return predictions.to_json(orient='records')
 
         except Exception as e:
 
             return jsonify({'error': str(e), 'trace': traceback.format_exc()})
     else:
         print('train first')
-        return 'no model here'
+        return {'error': 'No trained model available for predictions'}
 
 
-@app.route('/train', methods=['GET'])
+@app.route('/train', methods=['POST'])
 def train():
-    # using random forest as an example
-    # can do the training separately and just update the pickles
-    from sklearn.ensemble import RandomForestClassifier as rf
-
-    df = pd.read_csv(training_data)
-    df_ = df[include]
-
-    categoricals = []  # going to one-hot encode categorical variables
-
-    for col, col_type in df_.dtypes.iteritems():
-        if col_type == 'O':
-            categoricals.append(col)
-        else:
-            df_[col].fillna(0, inplace=True)  # fill NA's with 0 for ints/floats, too generic
-
-    # get_dummies effectively creates one-hot encoded variables
-    df_ohe = pd.get_dummies(df_, columns=categoricals, dummy_na=True)
-
-    x = df_ohe[df_ohe.columns.difference([dependent_variable])]
-    y = df_ohe[dependent_variable]
-
-    # capture a list of columns that will be used for prediction
+    body = request.json
+    df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'])
     global model_columns
-    model_columns = list(x.columns)
-    joblib.dump(model_columns, model_columns_file_name)
-
-    global clf
-    clf = rf()
+    model_columns = []
+    model_columns.append(body['parameters']['datetimeName'])
+    model_columns += body['parameters']['predictorNames']
+    df = df[model_columns]
+    global predictor
+    predictor = AnomalyDetector(train_df=df, target=body['parameters']['targetName'], pastTargetasPredictor = True,
+                               timeVar=body['parameters']['datetimeName'], predictors=body['parameters']['predictorNames'])
     start = time.time()
-    clf.fit(x, y)
-    print('Trained in %.1f seconds' % (time.time() - start))
-    print('Model training score: %s' % clf.score(x, y))
-
-    joblib.dump(clf, model_file_name)
-
-    return 'Success'
+    model, score = predictor.trainModel()
+    trainingTime = np.around(time.time() - start, decimals=3)
+    print('Trained in {0:.3f} seconds'.format(trainingTime))
+    print('Scores: {}'.format(score))
+    joblib.dump(predictor, model_file_name)
+    joblib.dump(model_columns, model_columns_file_name)
+    features = predictor.feature_importances()
+    if ('ERROR' in features):
+        response = {'training time': time.time() - start, 'score': score}
+    else:
+        featuresImp = []
+        for feature in features.index.values:
+             featuresImp.append({feature: features.loc[feature]['importance']})
+        print(features)
+        response = {'training time': trainingTime, 'score': score, 'features importances': featuresImp} #'model params': model.get_params()
+    return jsonify(response)
 
 
 @app.route('/wipe', methods=['GET'])
 def wipe():
     try:
-        shutil.rmtree('model')
+        shutil.rmtree('predictor')
         os.makedirs(model_directory)
         return 'Model wiped'
 
@@ -111,7 +103,7 @@ if __name__ == '__main__':
     port = 80
 
     try:
-        clf = joblib.load(model_file_name)
+        predictor = joblib.load(model_file_name)
         print('model loaded')
         model_columns = joblib.load(model_columns_file_name)
         print('model columns loaded')
@@ -120,7 +112,7 @@ if __name__ == '__main__':
         print('No model here')
         print('Train first')
         print(str(e))
-        clf = None
+        predictor = None
 
     #app.run(host='0.0.0.0', port=port, debug=True)
     app.run(debug=True)

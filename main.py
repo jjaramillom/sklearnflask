@@ -9,6 +9,9 @@ import pandas as pd
 import numpy as np
 from sklearn.externals import joblib
 from Anomalies_Detector import AnomalyDetector
+from werkzeug.exceptions import BadRequest
+from flask import abort
+
 
 app = Flask(__name__)
 
@@ -36,30 +39,38 @@ def main():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if predictor:
-        try:
-            body = request.json
-            df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'])
-            global model_columns
-            df = df[model_columns]
-            start = time.time()
-            predictions = predictor.predict(df)
-            trainingTime = np.around(time.time() - start, decimals=3)
-            print('prediction in {0:.3f} seconds'.format(trainingTime))
-            return predictions.to_json(orient='records')
-
-        except Exception as e:
-
-            return jsonify({'error': str(e), 'trace': traceback.format_exc()})
-    else:
+    if predictor == None:
         print('train first')
-        return {'error': 'No trained model available for predictions'}
+        message = ({'error': 'There is no existing trained model. Please create one before deleting it.'})
+        # return message
+        abort(400, message)
+        # raise BadRequest(message)
+    try:
+        body = request.json
+        df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'])
+        global model_columns
+        df = df[model_columns]
+        start = time.time()
+        predictions = predictor.predict(df)
+        trainingTime = np.around(time.time() - start, decimals=3)
+        print('prediction in {0:.3f} seconds'.format(trainingTime))
+        return predictions.to_json(orient='records')
+
+    except Exception as e:
+        message =  jsonify({'error': str(e), 'trace': traceback.format_exc()})
+        raise BadRequest(message)
+        
 
 
 @app.route('/train', methods=['POST'])
 def train():
-    body = request.json
-    df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'])
+    try:
+        body = request.json
+        df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'])
+    except Exception as e:
+        message =  jsonify({'error': str(e), 'trace': traceback.format_exc()})
+        # return jsonify(message)
+        raise BadRequest(message)
     global model_columns
     model_columns = []
     model_columns.append(body['parameters']['datetimeName'])
@@ -89,14 +100,17 @@ def train():
 
 @app.route('/wipe', methods=['GET'])
 def wipe():
+    if (predictor == None):
+        message = jsonify({'error': 'There is no existing trained model. Please create one before deleting it.'})
+        raise BadRequest(message)
     try:
-        shutil.rmtree('predictor')
+        shutil.rmtree('model')
         os.makedirs(model_directory)
-        return 'Model wiped'
+        return jsonify({'msg': 'Model deleted.'})
+        predict = None
 
     except Exception as e:
-        print("type error: " + str(e))
-        return 'Could not remove and recreate the model directory'
+        return jsonify({"error": str(e)})
 
 
 if __name__ == '__main__':

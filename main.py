@@ -116,7 +116,7 @@ def wipe():
 
 
 if __name__ == '__main__':
-    port = 80
+    #port = 80
 
     try:
         predictor = joblib.load(model_file_name)
@@ -131,4 +131,4 @@ if __name__ == '__main__':
         predictor = None
 
     #app.run(host='0.0.0.0', port=port, debug=True)
-    app.run(debug=True)
+    #app.run(debug=True)

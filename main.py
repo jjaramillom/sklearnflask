@@ -4,22 +4,16 @@ import shutil
 import time
 import traceback
 
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, abort
 import pandas as pd
 import numpy as np
 from sklearn.externals import joblib
 from Anomalies_Detector import AnomalyDetector
 from werkzeug.exceptions import BadRequest
-from flask import abort
-
-pd.set_option('display.max_rows', None)
 
 app = Flask(__name__)
 
 # inputs
-training_data = 'data/titanic.csv'
-include = ['Age', 'Sex', 'Embarked', 'Survived']
-dependent_variable = include[-1]
 
 pickelName = 'testing'
 
@@ -35,7 +29,7 @@ predictor = None
 @app.route('/', methods=['GET'])
 def main():
     #print(request.args['version'])
-    return jsonify({'valid requests': ['/train - POST', '/predict - POST', '/wipe - GET']})
+	make_response(jsonify({'valid requests': ['/train - POST', '/predict - POST', '/wipe - GET']}), 201)
 
 
 @app.route('/predict', methods=['POST'])
@@ -115,20 +109,20 @@ def wipe():
         return jsonify({"error": str(e)})
 
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
     #port = 80
 
-    try:
-        predictor = joblib.load(model_file_name)
-        print('model loaded')
-        model_columns = joblib.load(model_columns_file_name)
-        print('model columns loaded')
+try:
+	predictor = joblib.load(model_file_name)
+	print('model loaded')
+	model_columns = joblib.load(model_columns_file_name)
+	print('model columns loaded')
 
-    except Exception as e:
-        print('No model here')
-        print('Train first')
-        print(str(e))
-        predictor = None
+except Exception as e:
+	print('No model here')
+	print('Train first')
+	print(str(e))
+	predictor = None
 
     #app.run(host='0.0.0.0', port=port, debug=True)
     #app.run(debug=True)

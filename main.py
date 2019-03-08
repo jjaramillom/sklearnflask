@@ -4,7 +4,7 @@ import shutil
 import time
 import traceback
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 import pandas as pd
 import numpy as np
 from sklearn.externals import joblib
@@ -12,6 +12,7 @@ from Anomalies_Detector import AnomalyDetector
 from werkzeug.exceptions import BadRequest
 from flask import abort
 
+pd.set_option('display.max_rows', None)
 
 app = Flask(__name__)
 
@@ -33,7 +34,7 @@ predictor = None
 
 @app.route('/', methods=['GET'])
 def main():
-    print(request.args['version'])
+    #print(request.args['version'])
     return jsonify({'valid requests': ['/train - POST', '/predict - POST', '/wipe - GET']})
 
 
@@ -66,7 +67,7 @@ def predict():
 def train():
     try:
         body = request.json
-        df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'])
+        df = pd.DataFrame(columns=body['data']['columnNames'], data=body['data']['values'][:100])
     except Exception as e:
         message =  jsonify({'error': str(e), 'trace': traceback.format_exc()})
         # return jsonify(message)
@@ -74,6 +75,7 @@ def train():
     global model_columns
     model_columns = []
     model_columns.append(body['parameters']['datetimeName'])
+    model_columns.append(body['parameters']['targetName'])
     model_columns += body['parameters']['predictorNames']
     df = df[model_columns]
     global predictor
@@ -95,7 +97,7 @@ def train():
              featuresImp.append({feature: features.loc[feature]['importance']})
         print(features)
         response = {'training time': trainingTime, 'score': score, 'features importances': featuresImp} #'model params': model.get_params()
-    return jsonify(response)
+    return make_response(jsonify(response), 201)
 
 
 @app.route('/wipe', methods=['GET'])

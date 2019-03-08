@@ -15,7 +15,7 @@ pip install flask
 --SAVES THE INSTALLED PACKAGES IN REQUIREMENTS,TXT
 pip freeze > requirements.txt
 
-set FLASK_APP=flaskblog.py
+set FLASK_APP=main.py
 flask run
 
-python flaskblog.py
+python main.py
